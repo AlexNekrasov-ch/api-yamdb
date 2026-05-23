@@ -32,15 +32,10 @@ class User(AbstractUser):
         verbose_name='Биография',
     )
     role = models.CharField(
-        max_length=9,
+        max_length=20,
         choices=ROLE_CHOICES,
         default=USER,
         verbose_name='Роль',
-    )
-    confirmation_code = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name='Код подтверждения',
     )
 
     class Meta:

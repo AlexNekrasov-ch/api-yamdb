@@ -1,5 +1,6 @@
 import secrets
 
+from django.core.cache import cache
 from django.core.mail import send_mail
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
@@ -24,30 +25,32 @@ def signup(request):
     email = serializer.validated_data['email']
     username = serializer.validated_data['username']
 
-    if User.objects.filter(email=email, username=username).exists():
-        user = User.objects.get(email=email, username=username)
-    elif User.objects.filter(email=email).exists():
-        return Response(
-            {'email': ['Пользователь с таким email уже существует.']},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    elif User.objects.filter(username=username).exists():
-        return Response(
-            {'username': ['Пользователь с таким username уже существует.']},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    else:
-        user = User.objects.create_user(
+    if not User.objects.filter(username=username, email=email).exists():
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'username': [
+                    'Пользователь с таким username уже существует.',
+                ]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'email': [
+                    'Пользователь с таким email уже существует.',
+                ]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        User.objects.create_user(
             username=username,
             email=email,
         )
 
-    user.confirmation_code = secrets.token_hex(16)
-    user.save(update_fields=['confirmation_code'])
+    code = secrets.token_hex(16)
+    cache.set(f'confirmation_code_{username}', code, timeout=600)
 
     send_mail(
         'Код подтверждения',
-        f'Ваш код подтверждения: {user.confirmation_code}',
+        f'Ваш код подтверждения: {code}',
         None,
         [email],
         fail_silently=False,
@@ -75,7 +78,8 @@ def token(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    if user.confirmation_code != confirmation_code:
+    cached_code = cache.get(f'confirmation_code_{username}')
+    if cached_code != confirmation_code:
         return Response(
             {'confirmation_code': ['Неверный код подтверждения.']},
             status=status.HTTP_400_BAD_REQUEST,
