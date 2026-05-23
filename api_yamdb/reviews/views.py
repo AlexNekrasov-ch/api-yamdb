@@ -1,59 +1,74 @@
-from django.db.models import Avg, Count
-from django.db.models.functions import Coalesce
+from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, filters
+from rest_framework import filters, mixins, viewsets
 
+from .filters import TitleFilter
 from .models import Category, Genre, Title
-from .serializers import (
-    CategorySerializer, GenreSerializer, 
-    TitleReadSerializer, TitleCreateUpdateSerializer
-)
 from .permissions import IsAdminOrReadOnly
+from .serializers import (CategorySerializer, GenreSerializer,
+                          TitleCreateUpdateSerializer, TitleReadSerializer)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+# Абстрактный базовый класс для категорий и жанров
+class SlugBasedViewSet(mixins.CreateModelMixin,
+                       mixins.DestroyModelMixin,
+                       mixins.ListModelMixin,
+                       viewsets.GenericViewSet):
     """
-    ViewSet для категорий:
-    - list (GET), create (POST), retrieve (GET), update (PUT), partial_update (PATCH), destroy (DELETE)
-    - Удаление по slug (не по id)
+    Абстрактный базовый ViewSet для моделей,
+    использующих slug для идентификации.
+    Поддерживает только GET (список), POST и DELETE.
     """
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
-    lookup_field = 'slug'  # Важно! Используем slug вместо id для lookup
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['title']
-
-
-class GenreViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet для жанров:
-    - Аналогичен CategoryViewSet
-    """
-    queryset = Genre.objects.all()
-    serializer_class = GenreSerializer
     permission_classes = [IsAdminOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter]
-    search_fields = ['title']
+    search_fields = ('name',)
+
+
+    def get_queryset(self):
+        """Может быть переопределено в дочерних классах"""
+        return super().get_queryset()
+
+    def get_serializer_class(self):
+        """Может быть переопределено в дочерних классах"""
+        return super().get_serializer_class()
+
+
+class CategoryViewSet(SlugBasedViewSet):
+    """
+    ViewSet для категорий:
+    - GET /categories/ — список категорий
+    - POST /categories/ — создание категории (только admin)
+    - DELETE /categories/{slug}/ — удаление категории (только admin)
+    """
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class GenreViewSet(SlugBasedViewSet):
+    """
+    ViewSet для жанров:
+    - GET /genres/ — список жанров
+    - POST /genres/ — создание жанра (только admin)
+    - DELETE /genres/{slug}/ — удаление жанра (только admin)
+    """
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     """
-    ViewSet для произведений:
-    - GET (list, retrieve) использует TitleReadSerializer (с подробной информацией)
-    - POST, PUT, PATCH использует TitleWriteSerializer (для создания/обновления)
-    - Поддерживает фильтрацию по category, genre, name, year
+    ViewSet для произведений (полный CRUD)
     """
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [
         DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
     ]
-    # Фильтрация по полям
-    filterset_fields = ['category__slug', 'genre__slug', 'year']
-    search_fields = ['title']  # Поиск по названию
-    ordering_fields = ['title', 'year', 'rating']  # Сортировка
-    ordering = ['-year']  # Сортировка по умолчанию (новые сначала)
+    filterset_class = TitleFilter
+    search_fields = ['name']
+    ordering_fields = ['name', 'year', 'rating']
+    ordering = ['-year']
 
     def get_queryset(self):
         """
@@ -66,11 +81,8 @@ class TitleViewSet(viewsets.ModelViewSet):
             .prefetch_related('genre')
         )
 
-        # Аннотируем средний рейтинг
-        # Coalesce нужен, чтобы для произведений без отзывов был 0 или null
-        # Если нет отзывов - рейтинг 0
         queryset = queryset.annotate(
-            rating=Coalesce(Avg('reviews__score'), 0)
+            rating=Avg('reviews__score')
         )
 
         return queryset
@@ -79,13 +91,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         """
         Выбираем сериализатор в зависимости от типа запроса
         """
-        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
-            return TitleReadSerializer
-        return TitleWriteSerializer
-
-    def perform_create(self, serializer):
-        """
-        При создании произведения дополнительная логика не требуется,
-        всё уже сделано в сериализаторе
-        """
-        serializer.save()
+        if self.action in ('create', 'update', 'partial_update'):
+            return TitleCreateUpdateSerializer
+        return TitleReadSerializer

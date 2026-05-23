@@ -3,18 +3,18 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
-from django.forms import SelectMultiple
 
-from .models import (
-    User, Category, Genre, Title, TitleGenre, Review, Comment
-)
+from .models import Category, Comment, Genre, Review, Title, TitleGenre, User
 
 
 # --- Resources для импорта/экспорта ---
 class UserResource(resources.ModelResource):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'bio', 'first_name', 'last_name')
+        fields = (
+            'id', 'username', 'email', 'role',
+            'bio', 'first_name', 'last_name'
+        )
         import_id_fields = ('id',)
         skip_unchanged = True
 
@@ -58,23 +58,34 @@ class CommentResource(resources.ModelResource):
 @admin.register(User)
 class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
     resource_class = UserResource
-    list_display = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'is_staff')
+    list_display = (
+        'id', 'username', 'email', 'first_name',
+        'last_name', 'role', 'is_staff'
+    )
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
     search_fields = ('username', 'email', 'first_name', 'last_name')
-    
+
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email', 'bio')}),
+        (_('Personal info'),
+         {'fields': ('first_name', 'last_name', 'email', 'bio')}
+         ),
         (_('Permissions'), {
-            'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': (
+                'role', 'is_active', 'is_staff',
+                'is_superuser', 'groups', 'user_permissions'
+            ),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
-    
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'role', 'first_name', 'last_name', 'bio'),
+            'fields': (
+                'username', 'email', 'password1', 'password2',
+                'role', 'first_name', 'last_name', 'bio'
+            ),
         }),
     )
 
@@ -110,9 +121,8 @@ class TitleAdmin(ImportExportModelAdmin):
     list_display = ('id', 'name', 'year', 'category', 'description')
     list_filter = ('year', 'category')
     search_fields = ('name', 'description')
-    raw_id_fields = ('category',)  # Используем raw_id_fields для внешнего ключа
-    inlines = [TitleGenreInline]   # Используем inline для управления жанрами
-    # Убираем filter_horizontal, так как поле genre использует through модель
+    raw_id_fields = ('category',)
+    inlines = [TitleGenreInline]
 
 
 @admin.register(Review)

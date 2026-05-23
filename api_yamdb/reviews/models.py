@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -56,13 +56,14 @@ class User(AbstractUser):
     def is_moderator(self):
         """Проверяет, является ли пользователь модератором."""
         return self.role == self.MODERATOR
+
+
 # Основные модели проекта
 class Category(models.Model):
     """Категории произведений (Фильмы, Книги, Музыка)"""
     name = models.CharField(
         max_length=256,
         unique=True,
-        default='Без категории',
         verbose_name='Название категории'
     )
     slug = models.SlugField(

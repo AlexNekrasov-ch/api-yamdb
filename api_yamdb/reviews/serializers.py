@@ -1,60 +1,51 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models import Avg
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models import Avg
 
-from .models import Category, Genre, Title, TitleGenre
+from .models import Category, Comment, Genre, Review, Title, TitleGenre
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для категорий"""
 
-    name = serializers.CharField(source='title', read_only=True)
-
     class Meta:
         model = Category
-        fields = ('id', 'name', 'slug')
-        # slug только для чтения при обновлении
-        read_only_fields = ('slug',)
+        fields = ('name', 'slug')
 
 
 class GenreSerializer(serializers.ModelSerializer):
     """Сериализатор для жанров"""
 
-    name = serializers.CharField(source='title', read_only=True)
-
     class Meta:
         model = Genre
-        fields = ('id', 'name', 'slug')
-        read_only_fields = ('slug',)
+        fields = ('name', 'slug')
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения произведений (GET)"""
 
-    name = serializers.CharField(source='title')
-    rating = serializers.SerializerMethodField(read_only=True)
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(many=True, read_only=True)
+    rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'rating', 'description',
-                  'genre', 'category', 'is_published'
-                  )
+        fields = (
+            'id', 'name', 'year', 'rating',
+            'description', 'genre', 'category'
+        )
 
     def get_rating(self, obj):
         """Получение рейтинга из аннотированного поля или вычисление"""
-        if hasattr(obj, 'rating'):
-            return obj.rating
-        # Если рейтинг не аннотирован, вычисляем
-        rating = obj.reviews.aggregate(Avg('score'))['score__avg']
-        return round(rating, 1) if rating else None
+        rating = getattr(obj, 'rating', None)
+        if rating is not None:
+            return round(rating, 1)
+        return None
 
 
 class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания/обновления произведений (POST, PUT, PATCH)"""
-    name = serializers.CharField(source='title')
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'

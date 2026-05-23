@@ -1,9 +1,11 @@
 import csv
-from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-from reviews.models import Category, Genre, Title, TitleGenre, Review, Comment
-from django.utils import timezone
 from datetime import datetime
+
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from reviews.models import Category, Comment, Genre, Review, Title, TitleGenre
 
 User = get_user_model()
 
@@ -14,7 +16,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Путь к папке с CSV файлами
         base_path = 'static/data/'
-        
+
         # Порядок импорта важен из-за внешних ключей
         import_order = [
             ('users.csv', self.import_users),
@@ -25,7 +27,7 @@ class Command(BaseCommand):
             ('review.csv', self.import_reviews),
             ('comments.csv', self.import_comments),
         ]
-        
+
         for filename, import_func in import_order:
             self.stdout.write(f'Importing {filename}...')
             try:
@@ -41,7 +43,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.ERROR(f'Error importing {filename}: {str(e)}')
                 )
-    
+
     def import_users(self, filepath):
         """Импорт пользователей из users.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -60,7 +62,7 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(f'  Created user: {user.username}')
-    
+
     def import_categories(self, filepath):
         """Импорт категорий из category.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -75,7 +77,7 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(f'  Created category: {category.name}')
-    
+
     def import_genres(self, filepath):
         """Импорт жанров из genre.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -90,7 +92,7 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(f'  Created genre: {genre.name}')
-    
+
     def import_titles(self, filepath):
         """Импорт произведений из titles.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -105,7 +107,7 @@ class Command(BaseCommand):
                         self.stdout.write(
                             f'  Warning: Category id={row["category"]} not found for title {row["name"]}'
                         )
-                
+
                 title, created = Title.objects.get_or_create(
                     id=row['id'],
                     defaults={
@@ -117,7 +119,7 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(f'  Created title: {title.name}')
-    
+
     def import_title_genre(self, filepath):
         """Импорт связей произведение-жанр из genre_title.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -126,7 +128,7 @@ class Command(BaseCommand):
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     genre = Genre.objects.get(id=row['genre_id'])
-                    
+
                     title_genre, created = TitleGenre.objects.get_or_create(
                         title=title,
                         genre=genre
@@ -143,7 +145,7 @@ class Command(BaseCommand):
                     self.stdout.write(
                         f'  Warning: Genre id={row["genre_id"]} not found'
                     )
-    
+
     def import_reviews(self, filepath):
         """Импорт отзывов из review.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -152,10 +154,10 @@ class Command(BaseCommand):
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     author = User.objects.get(id=row['author'])
-                    
+
                     # Преобразуем дату из строки
                     pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    
+
                     review, created = Review.objects.get_or_create(
                         id=row['id'],
                         defaults={
@@ -178,7 +180,7 @@ class Command(BaseCommand):
                     self.stdout.write(
                         f'  Warning: User id={row["author"]} not found for review {row["id"]}'
                     )
-    
+
     def import_comments(self, filepath):
         """Импорт комментариев из comments.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
@@ -187,10 +189,10 @@ class Command(BaseCommand):
                 try:
                     review = Review.objects.get(id=row['review_id'])
                     author = User.objects.get(id=row['author'])
-                    
+
                     # Преобразуем дату из строки
                     pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    
+
                     comment, created = Comment.objects.get_or_create(
                         id=row['id'],
                         defaults={

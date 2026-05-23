@@ -1,6 +1,7 @@
-import os
-import django
 import csv
+import os
+
+import django
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -8,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'api_yamdb.settings')
 django.setup()
 
-from .models import User, Category, Genre, Title, TitleGenre, Review, Comment
+from .models import Category, Comment, Genre, Review, Title, TitleGenre, User
 
 
 def load_users(csv_file_path):
@@ -59,7 +60,9 @@ def load_titles(csv_file_path):
                 try:
                     category = Category.objects.get(slug=row['category_slug'])
                 except ObjectDoesNotExist:
-                    print(f"Категория с slug '{row['category_slug']}' не найдена")
+                    print(
+                        f"Категория с slug '{row['category_slug']}' не найдена"
+                    )
                     continue
 
             Title.objects.get_or_create(
@@ -77,14 +80,14 @@ def load_title_genres(csv_file_path):
         reader = csv.DictReader(file)
         for row in reader:
             try:
-                title = Title.objects.get(title=row['title'])  # Или используйте id, если есть
+                title = Title.objects.get(title=row['title'])
                 genre = Genre.objects.get(slug=row['genre_slug'])
                 TitleGenre.objects.get_or_create(
                     title=title,
                     genre=genre
                 )
             except ObjectDoesNotExist as e:
-                print(f"Ошибка при создании связи TitleGenre: {e}")
+                print(f'Ошибка при создании связи TitleGenre: {e}')
 
 def load_reviews(csv_file_path):
     with open(csv_file_path, mode='r', encoding='utf-8') as file:
@@ -92,7 +95,7 @@ def load_reviews(csv_file_path):
         for row in reader:
             try:
                 author = User.objects.get(username=row['author_username'])
-                title = Title.objects.get(title=row['title_name'])  # Используйте уникальное поле
+                title = Title.objects.get(title=row['title_name'])
                 Review.objects.get_or_create(
                     author=author,
                     title=title,
@@ -102,7 +105,7 @@ def load_reviews(csv_file_path):
                     }
                 )
             except ObjectDoesNotExist as e:
-                print(f"Не удалось найти автора или произведение для отзыва: {e}")
+                print(f'Не удалось найти автора или произведение для отзыва: {e}')
 
 def load_comments(csv_file_path):
     with open(csv_file_path, mode='r', encoding='utf-8') as file:
@@ -119,7 +122,7 @@ def load_comments(csv_file_path):
                     }
                 )
             except ObjectDoesNotExist as e:
-                print(f"Не удалось найти отзыв или автора для комментария: {e}")
+                print(f'Не удалось найти отзыв или автора для комментария: {e}')
 
 if __name__ == '__main__':
     # Укажите пути к вашим CSV-файлам

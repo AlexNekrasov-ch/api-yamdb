@@ -15,6 +15,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
         # Для небезопасных методов проверяем,
         # является ли пользователь администратором
-        # Анонимные пользователи не проходят эту проверку
-        # (у них нет атрибута is_admin)
-        return request.user.is_authenticated and request.user.is_admin
+        return (request.user.is_authenticated
+                and (
+                    request.user.role == 'admin' or request.user.is_superuser)
+                )
