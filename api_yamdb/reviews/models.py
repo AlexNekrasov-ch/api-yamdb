@@ -1,11 +1,11 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 
 
-# Кастомная модель пользователя
 class User(AbstractUser):
+    """Кастомная модель пользователя с ролью и биографией."""
     USER = 'user'
     MODERATOR = 'moderator'
     ADMIN = 'admin'
@@ -18,14 +18,16 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=150,
         unique=True,
-        verbose_name='Уникальный идентификатор'
+        validators=[UnicodeUsernameValidator()],
+        error_messages={
+            'unique': 'Пользователь с таким именем уже существует.',
+        },
     )
-
     email = models.EmailField(
+        max_length=254,
         unique=True,
-        verbose_name='Электронная почта'
+        verbose_name='Email',
     )
-
     bio = models.TextField(
         blank=True,
         verbose_name='Биография',
@@ -40,7 +42,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ('id',)
+        ordering = ('username',)
 
     def __str__(self):
         return self.username
@@ -54,45 +56,6 @@ class User(AbstractUser):
     def is_moderator(self):
         """Проверяет, является ли пользователь модератором."""
         return self.role == self.MODERATOR
-
-
-# Абстрактные модели
-class CreatedAtModel(models.Model):
-    """Абстрактная модель с датой создания"""
-    created_at = models.DateTimeField(
-        'Дата и время создания',
-        auto_now_add=True
-    )
-
-    class Meta:
-        abstract = True
-
-
-class PublishedModel(models.Model):
-    """Абстрактная модель с флагом публикации"""
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True
-    )
-
-    class Meta:
-        abstract = True
-
-
-class TitledModel(models.Model):
-    """Абстрактная модель с заголовком"""
-    title = models.CharField(
-        'Заголовок',
-        max_length=256
-    )
-
-    class Meta:
-        abstract = True
-
-    def __str__(self):
-        return self.title
-
-
 # Основные модели проекта
 class Category(models.Model):
     """Категории произведений (Фильмы, Книги, Музыка)"""
