@@ -8,13 +8,10 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import User
+
 from .permissions import IsAdmin
-from .serializers import (
-    SignupSerializer,
-    TokenSerializer,
-    UserMeSerializer,
-    UserSerializer,
-)
+from .serializers import (SignupSerializer, TokenSerializer, UserMeSerializer,
+                          UserSerializer)
 
 
 @api_view(['POST'])
