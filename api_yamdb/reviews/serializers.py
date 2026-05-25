@@ -1,9 +1,6 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models import Avg
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
-from .models import Category, Comment, Genre, Review, Title, TitleGenre
+from .models import Category, Genre, Title
 
 
 class CategorySerializer(serializers.ModelSerializer):

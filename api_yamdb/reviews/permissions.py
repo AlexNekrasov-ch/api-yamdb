@@ -17,5 +17,5 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         # является ли пользователь администратором
         return (request.user.is_authenticated
                 and (
-                    request.user.role == 'admin' or request.user.is_superuser)
+                    request.user.is_admin or request.user.is_superuser)
                 )

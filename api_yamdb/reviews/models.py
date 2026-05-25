@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -86,7 +87,6 @@ class Genre(models.Model):
     name = models.CharField(
         max_length=256,
         unique=True,
-        default='Без жанра',
         verbose_name='Название жанра'
     )
     slug = models.SlugField(
@@ -108,11 +108,12 @@ class Title(models.Model):
     """Произведения, к которым пишут отзывы"""
     name = models.CharField(
         max_length=256,
-        default='Без названия',
         verbose_name='Название произведения'
     )
     year = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(2026)],
+        validators=[
+            MinValueValidator(1), MaxValueValidator(timezone.now().year)
+        ],
         default=2024,
         verbose_name='Год выпуска'
     )
@@ -247,5 +248,7 @@ class Comment(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return f'Комментарий от {self.author.username}'
-        'к отзыву {self.review.id}'
+        return (
+            f'Комментарий от {self.author.username} '
+            f'к отзыву {self.review.id}'
+        )

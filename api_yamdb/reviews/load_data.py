@@ -11,6 +11,8 @@ django.setup()
 
 from .models import Category, Comment, Genre, Review, Title, TitleGenre, User
 
+DATA_DIR = settings.BASE_DIR / 'static' / 'data'
+
 
 def load_users(csv_file_path):
     with open(csv_file_path, mode='r', encoding='utf-8') as file:
@@ -34,8 +36,7 @@ def load_categories(csv_file_path):
             Category.objects.get_or_create(
                 slug=row['slug'],
                 defaults={
-                    'title': row['title'],
-                    'is_published': row.get('is_published', True) == 'True'
+                    'name': row['name']
                 }
             )
 
@@ -46,8 +47,7 @@ def load_genres(csv_file_path):
             Genre.objects.get_or_create(
                 slug=row['slug'],
                 defaults={
-                    'title': row['title'],
-                    'is_published': row.get('is_published', True) == 'True'
+                    'name': row['name']
                 }
             )
 
@@ -65,13 +65,24 @@ def load_titles(csv_file_path):
                     )
                     continue
 
+            # Преобразуем year в число, если поле существует и не пустое
+            year_value = None
+            if row.get('year'):
+                try:
+                    year_value = int(row['year'])
+                except ValueError:
+                    print(
+                        f"Некорректный год: {row['year']} "
+                        f"для фильма {row.get('title', 'Unknown')}"
+                    )
+                    continue
+
             Title.objects.get_or_create(
-                title=row['title'],  # Используем title как уникальное поле
+                name=row['name'],
                 defaults={
                     'description': row.get('description', ''),
-                    'year': row.get('year', None),
-                    'category': category,
-                    'is_published': row.get('is_published', True) == 'True',
+                    'year': year_value,
+                    'category': category
                 }
             )
 
@@ -125,11 +136,10 @@ def load_comments(csv_file_path):
                 print(f'Не удалось найти отзыв или автора для комментария: {e}')
 
 if __name__ == '__main__':
-    # Укажите пути к вашим CSV-файлам
-    load_users('../static/data/users.csv')
-    load_categories('../static/data/category.csv')
-    load_genres('../static/data/genre.csv')
-    load_titles('../static/data/titles.csv')
-    load_title_genres('../static/data/genre_title.csv')
-    load_reviews('../static/data/review.csv')
-    load_comments('../static/data/comments.csv')
+    load_users('DATA_DIR/users.csv')
+    load_categories('DATA_DIR/category.csv')
+    load_genres('DATA_DIR/genre.csv')
+    load_titles('DATA_DIR/titles.csv')
+    load_title_genres('DATA_DIR/genre_title.csv')
+    load_reviews('DATA_DIR/review.csv')
+    load_comments('DATA_DIR/comments.csv')
