@@ -2,7 +2,6 @@ import csv
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
-from django.db import IntegrityError
 
 from reviews.models import (Category, Comment, Genre, Review, Title,
                             TitleGenre, User)
@@ -13,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         base_path = 'static/data/'
-        
+
         # Порядок импорта важен из-за внешних ключей
         import_order = [
             ('users.csv', self.import_users, 'Пользователи'),
@@ -38,7 +37,9 @@ class Command(BaseCommand):
                 )
             except Exception as e:
                 self.stdout.write(
-                    self.style.ERROR(f'  ❌ Ошибка при импорте {filename}: {str(e)}')
+                    self.style.ERROR(
+                        f'  ❌ Ошибка при импорте {filename}: {str(e)}'
+                    )
                 )
 
     def import_users(self, filepath):
@@ -60,7 +61,9 @@ class Command(BaseCommand):
                 )
                 if created:
                     count += 1
-                    self.stdout.write(f'    - Создан пользователь: {user.username}')
+                    self.stdout.write(
+                        f'    - Создан пользователь: {user.username}'
+                    )
             self.stdout.write(f'    Создано {count} новых пользователей')
 
     def import_categories(self, filepath):
@@ -78,7 +81,9 @@ class Command(BaseCommand):
                 )
                 if created:
                     count += 1
-                    self.stdout.write(f'    - Создана категория: {category.name}')
+                    self.stdout.write(
+                        f'    - Создана категория: {category.name}'
+                    )
             self.stdout.write(f'    Создано {count} новых категорий')
 
     def import_genres(self, filepath):
@@ -110,8 +115,10 @@ class Command(BaseCommand):
                     try:
                         category = Category.objects.get(id=row['category'])
                     except Category.DoesNotExist:
-                        self.stdout.write(f'    ⚠️ Категория id={row["category"]} не найдена для "{row["name"]}"')
-                
+                        self.stdout.write(
+                            f'    ⚠️ Категория id={row["category"]} '
+                            f'не найдена для "{row["name"]}"')
+
                 title, created = Title.objects.get_or_create(
                     id=row['id'],
                     defaults={
@@ -123,7 +130,9 @@ class Command(BaseCommand):
                 )
                 if created:
                     count += 1
-                    self.stdout.write(f'    - Создано произведение: {title.name}')
+                    self.stdout.write(
+                        f'    - Создано произведение: {title.name}'
+                    )
             self.stdout.write(f'    Создано {count} новых произведений')
 
     def import_title_genre(self, filepath):
@@ -142,9 +151,13 @@ class Command(BaseCommand):
                     if created:
                         count += 1
                 except Title.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Произведение id={row["title_id"]} не найдено')
+                    self.stdout.write(
+                        f'    ⚠️ Произведение id={row["title_id"]} не найдено'
+                    )
                 except Genre.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Жанр id={row["genre_id"]} не найден')
+                    self.stdout.write(
+                        f'    ⚠️ Жанр id={row["genre_id"]} не найден'
+                    )
             self.stdout.write(f'    Создано {count} новых связей')
 
     def import_reviews(self, filepath):
@@ -156,10 +169,12 @@ class Command(BaseCommand):
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     author = User.objects.get(id=row['author'])
-                    
+
                     # Преобразуем дату
-                    pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    
+                    pub_date = datetime.strptime(
+                        row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ'
+                    )
+
                     review, created = Review.objects.get_or_create(
                         id=row['id'],
                         defaults={
@@ -173,9 +188,13 @@ class Command(BaseCommand):
                     if created:
                         count += 1
                 except Title.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Произведение id={row["title_id"]} не найдено для отзыва {row["id"]}')
+                    self.stdout.write(
+                        f'    ⚠️ Произведение id={row["title_id"]} '
+                        f'не найдено для отзыва {row["id"]}')
                 except User.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Пользователь id={row["author"]} не найден для отзыва {row["id"]}')
+                    self.stdout.write(
+                        f'    ⚠️ Пользователь id={row["author"]} '
+                        f'не найден для отзыва {row["id"]}')
             self.stdout.write(f'    Создано {count} новых отзывов')
 
     def import_comments(self, filepath):
@@ -187,10 +206,11 @@ class Command(BaseCommand):
                 try:
                     review = Review.objects.get(id=row['review_id'])
                     author = User.objects.get(id=row['author'])
-                    
+
                     # Преобразуем дату
-                    pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    
+                    pub_date = datetime.strptime(
+                        row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
+
                     comment, created = Comment.objects.get_or_create(
                         id=row['id'],
                         defaults={
@@ -203,7 +223,10 @@ class Command(BaseCommand):
                     if created:
                         count += 1
                 except Review.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Отзыв id={row["review_id"]} не найден для комментария {row["id"]}')
+                    self.stdout.write(f'    ⚠️ Отзыв id={row["review_id"]} '
+                                      f'не найден для комментария {row["id"]}')
                 except User.DoesNotExist:
-                    self.stdout.write(f'    ⚠️ Пользователь id={row["author"]} не найден для комментария {row["id"]}')
+                    self.stdout.write(
+                        f'    ⚠️ Пользователь id={row["author"]} '
+                        f'не найден для комментария {row["id"]}')
             self.stdout.write(f'    Создано {count} новых комментариев')

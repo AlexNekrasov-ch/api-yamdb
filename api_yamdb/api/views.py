@@ -45,7 +45,6 @@ class SlugBasedViewSet(mixins.CreateModelMixin,
     filter_backends = [filters.SearchFilter]
     search_fields = ('name',)
 
-
     def get_queryset(self):
         """Может быть переопределено в дочерних классах"""
         return super().get_queryset()
