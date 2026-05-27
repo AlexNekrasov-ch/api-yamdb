@@ -2,16 +2,57 @@ import secrets
 
 from django.core.cache import cache
 from django.core.mail import send_mail
-from rest_framework import filters, permissions, status, viewsets
+from django.db import models
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import User
+from reviews.models import Category, Comment, Genre, Review, Title, User
+from .filters import TitleFilter
+from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, ReviewSerializer, SignupSerializer,
+                          TitleCreateUpdateSerializer, TitleReadSerializer,
+                          TokenSerializer, UserMeSerializer, UserSerializer)
 
-from .permissions import IsAdmin
-from .serializers import (SignupSerializer, TokenSerializer, UserMeSerializer,
-                          UserSerializer)
+
+# Абстрактный базовый класс для опубликованных объектов
+class PublishedAtModel(models.Model):
+    pub_date = models.DateTimeField(
+        'Дата и время создания',
+        auto_now_add=True
+    )
+
+    class Meta:
+        abstract = True
+
+
+# Абстрактный базовый класс для категорий и жанров
+class SlugBasedViewSet(mixins.CreateModelMixin,
+                       mixins.DestroyModelMixin,
+                       mixins.ListModelMixin,
+                       viewsets.GenericViewSet):
+    """
+    Абстрактный базовый ViewSet для моделей,
+    использующих slug для идентификации.
+    Поддерживает только GET (список), POST и DELETE.
+    """
+    permission_classes = [IsAdminOrReadOnly]
+    lookup_field = 'slug'
+    filter_backends = [filters.SearchFilter]
+    search_fields = ('name',)
+
+
+    def get_queryset(self):
+        """Может быть переопределено в дочерних классах"""
+        return super().get_queryset()
+
+    def get_serializer_class(self):
+        """Может быть переопределено в дочерних классах"""
+        return super().get_serializer_class()
 
 
 @api_view(['POST'])
@@ -116,3 +157,128 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class CategoryViewSet(SlugBasedViewSet):
+    """
+    ViewSet для категорий:
+    - GET /categories/ — список категорий
+    - POST /categories/ — создание категории (только admin)
+    - DELETE /categories/{slug}/ — удаление категории (только admin)
+    """
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class GenreViewSet(SlugBasedViewSet):
+    """
+    ViewSet для жанров:
+    - GET /genres/ — список жанров
+    - POST /genres/ — создание жанра (только admin)
+    - DELETE /genres/{slug}/ — удаление жанра (только admin)
+    """
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для произведений (полный CRUD)
+    """
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [
+        DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
+    ]
+    filterset_class = TitleFilter
+    search_fields = ['name']
+    ordering_fields = ['name', 'year', 'rating']
+    ordering = ['-year']
+
+    def get_queryset(self):
+        """
+        Оптимизированный queryset с аннотацией рейтинга
+        """
+        # Базовый queryset с оптимизацией
+        queryset = (
+            Title.objects
+            .select_related('category')
+            .prefetch_related('genre')
+        )
+
+        queryset = queryset.annotate(
+            rating=models.Avg('reviews__score')
+        )
+
+        return queryset
+
+    def get_serializer_class(self):
+        """
+        Выбираем сериализатор в зависимости от типа запроса
+        """
+        if self.action in ('create', 'update', 'partial_update'):
+            return TitleCreateUpdateSerializer
+        return TitleReadSerializer
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """ViewSet для отзывов (вложенный в titles)"""
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthorOrModeratorOrAdmin]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        title_id = self.kwargs.get('title_id')
+        return (
+            Review.objects
+            .filter(title_id=title_id)
+            .select_related('author')
+        )
+
+    def get_title(self):
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Title, id=title_id)
+
+    def perform_create(self, serializer):
+        title = self.get_title()
+        serializer.save(author=self.request.user, title=title)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(
+                {'detail': 'Method PUT not allowed.'},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED
+            )
+        return super().update(request, *args, **kwargs)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    """ViewSet для комментариев (вложенный в reviews)"""
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthorOrModeratorOrAdmin]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        review_id = self.kwargs.get('review_id')
+        return (
+            Comment.objects
+            .filter(review_id=review_id)
+            .select_related('author')
+        )
+
+    def get_review(self):
+        title_id = self.kwargs.get('title_id')
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, id=review_id, title_id=title_id)
+
+    def perform_create(self, serializer):
+        review = self.get_review()
+        serializer.save(author=self.request.user, review=review)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(
+                {'detail': 'Method PUT not allowed.'},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED
+            )
+        return super().update(request, *args, **kwargs)

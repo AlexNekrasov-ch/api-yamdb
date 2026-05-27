@@ -1,53 +1,51 @@
 import csv
 from datetime import datetime
 
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.db import IntegrityError
 
-from reviews.models import Category, Comment, Genre, Review, Title, TitleGenre
-
-User = get_user_model()
+from reviews.models import (Category, Comment, Genre, Review, Title,
+                            TitleGenre, User)
 
 
 class Command(BaseCommand):
-    help = 'Import data from CSV files into the database'
+    help = 'Импорт данных из CSV-файлов в базу данных'
 
     def handle(self, *args, **options):
-        # Путь к папке с CSV файлами
         base_path = 'static/data/'
-
+        
         # Порядок импорта важен из-за внешних ключей
         import_order = [
-            ('users.csv', self.import_users),
-            ('category.csv', self.import_categories),
-            ('genre.csv', self.import_genres),
-            ('titles.csv', self.import_titles),
-            ('genre_title.csv', self.import_title_genre),
-            ('review.csv', self.import_reviews),
-            ('comments.csv', self.import_comments),
+            ('users.csv', self.import_users, 'Пользователи'),
+            ('category.csv', self.import_categories, 'Категории'),
+            ('genre.csv', self.import_genres, 'Жанры'),
+            ('titles.csv', self.import_titles, 'Произведения'),
+            ('genre_title.csv', self.import_title_genre, 'Связи жанров'),
+            ('review.csv', self.import_reviews, 'Отзывы'),
+            ('comments.csv', self.import_comments, 'Комментарии'),
         ]
 
-        for filename, import_func in import_order:
-            self.stdout.write(f'Importing {filename}...')
+        for filename, import_func, name in import_order:
+            self.stdout.write(f'\n📥 Импорт {name} из {filename}...')
             try:
                 import_func(f'{base_path}{filename}')
                 self.stdout.write(
-                    self.style.SUCCESS(f'Successfully imported {filename}')
+                    self.style.SUCCESS(f'  ✅ {name} успешно импортированы')
                 )
             except FileNotFoundError:
                 self.stdout.write(
-                    self.style.ERROR(f'File {filename} not found!')
+                    self.style.ERROR(f'  ❌ Файл {filename} не найден!')
                 )
             except Exception as e:
                 self.stdout.write(
-                    self.style.ERROR(f'Error importing {filename}: {str(e)}')
+                    self.style.ERROR(f'  ❌ Ошибка при импорте {filename}: {str(e)}')
                 )
 
     def import_users(self, filepath):
         """Импорт пользователей из users.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 user, created = User.objects.get_or_create(
                     id=row['id'],
@@ -61,12 +59,15 @@ class Command(BaseCommand):
                     }
                 )
                 if created:
-                    self.stdout.write(f'  Created user: {user.username}')
+                    count += 1
+                    self.stdout.write(f'    - Создан пользователь: {user.username}')
+            self.stdout.write(f'    Создано {count} новых пользователей')
 
     def import_categories(self, filepath):
         """Импорт категорий из category.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 category, created = Category.objects.get_or_create(
                     id=row['id'],
@@ -76,12 +77,15 @@ class Command(BaseCommand):
                     }
                 )
                 if created:
-                    self.stdout.write(f'  Created category: {category.name}')
+                    count += 1
+                    self.stdout.write(f'    - Создана категория: {category.name}')
+            self.stdout.write(f'    Создано {count} новых категорий')
 
     def import_genres(self, filepath):
         """Импорт жанров из genre.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 genre, created = Genre.objects.get_or_create(
                     id=row['id'],
@@ -91,23 +95,23 @@ class Command(BaseCommand):
                     }
                 )
                 if created:
-                    self.stdout.write(f'  Created genre: {genre.name}')
+                    count += 1
+                    self.stdout.write(f'    - Создан жанр: {genre.name}')
+            self.stdout.write(f'    Создано {count} новых жанров')
 
     def import_titles(self, filepath):
         """Импорт произведений из titles.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
-                # Получаем объект категории
                 category = None
                 if row.get('category'):
                     try:
                         category = Category.objects.get(id=row['category'])
                     except Category.DoesNotExist:
-                        self.stdout.write(
-                            f'  Warning: Category id={row["category"]} not found for title {row["name"]}'
-                        )
-
+                        self.stdout.write(f'    ⚠️ Категория id={row["category"]} не найдена для "{row["name"]}"')
+                
                 title, created = Title.objects.get_or_create(
                     id=row['id'],
                     defaults={
@@ -118,46 +122,44 @@ class Command(BaseCommand):
                     }
                 )
                 if created:
-                    self.stdout.write(f'  Created title: {title.name}')
+                    count += 1
+                    self.stdout.write(f'    - Создано произведение: {title.name}')
+            self.stdout.write(f'    Создано {count} новых произведений')
 
     def import_title_genre(self, filepath):
         """Импорт связей произведение-жанр из genre_title.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     genre = Genre.objects.get(id=row['genre_id'])
-
-                    title_genre, created = TitleGenre.objects.get_or_create(
+                    _, created = TitleGenre.objects.get_or_create(
                         title=title,
                         genre=genre
                     )
                     if created:
-                        self.stdout.write(
-                            f'  Linked title "{title.name}" with genre "{genre.name}"'
-                        )
+                        count += 1
                 except Title.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: Title id={row["title_id"]} not found'
-                    )
+                    self.stdout.write(f'    ⚠️ Произведение id={row["title_id"]} не найдено')
                 except Genre.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: Genre id={row["genre_id"]} not found'
-                    )
+                    self.stdout.write(f'    ⚠️ Жанр id={row["genre_id"]} не найден')
+            self.stdout.write(f'    Создано {count} новых связей')
 
     def import_reviews(self, filepath):
         """Импорт отзывов из review.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     author = User.objects.get(id=row['author'])
-
-                    # Преобразуем дату из строки
+                    
+                    # Преобразуем дату
                     pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-
+                    
                     review, created = Review.objects.get_or_create(
                         id=row['id'],
                         defaults={
@@ -169,30 +171,26 @@ class Command(BaseCommand):
                         }
                     )
                     if created:
-                        self.stdout.write(
-                            f'  Created review by {author.username} for "{title.name}"'
-                        )
+                        count += 1
                 except Title.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: Title id={row["title_id"]} not found for review {row["id"]}'
-                    )
+                    self.stdout.write(f'    ⚠️ Произведение id={row["title_id"]} не найдено для отзыва {row["id"]}')
                 except User.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: User id={row["author"]} not found for review {row["id"]}'
-                    )
+                    self.stdout.write(f'    ⚠️ Пользователь id={row["author"]} не найден для отзыва {row["id"]}')
+            self.stdout.write(f'    Создано {count} новых отзывов')
 
     def import_comments(self, filepath):
         """Импорт комментариев из comments.csv"""
         with open(filepath, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            count = 0
             for row in reader:
                 try:
                     review = Review.objects.get(id=row['review_id'])
                     author = User.objects.get(id=row['author'])
-
-                    # Преобразуем дату из строки
+                    
+                    # Преобразуем дату
                     pub_date = datetime.strptime(row['pub_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-
+                    
                     comment, created = Comment.objects.get_or_create(
                         id=row['id'],
                         defaults={
@@ -203,14 +201,9 @@ class Command(BaseCommand):
                         }
                     )
                     if created:
-                        self.stdout.write(
-                            f'  Created comment by {author.username} on review {review.id}'
-                        )
+                        count += 1
                 except Review.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: Review id={row["review_id"]} not found for comment {row["id"]}'
-                    )
+                    self.stdout.write(f'    ⚠️ Отзыв id={row["review_id"]} не найден для комментария {row["id"]}')
                 except User.DoesNotExist:
-                    self.stdout.write(
-                        f'  Warning: User id={row["author"]} not found for comment {row["id"]}'
-                    )
+                    self.stdout.write(f'    ⚠️ Пользователь id={row["author"]} не найден для комментария {row["id"]}')
+            self.stdout.write(f'    Создано {count} новых комментариев')
