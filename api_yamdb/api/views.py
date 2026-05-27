@@ -3,23 +3,20 @@ import secrets
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import models
-from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import User, Category, Comment, Genre, Review, Title
-
+from reviews.models import Category, Comment, Genre, Review, Title, User
 from .filters import TitleFilter
 from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
-from .serializers import (
-    SignupSerializer, TokenSerializer, UserMeSerializer, UserSerializer,
-    CategorySerializer, GenreSerializer,
-    TitleCreateUpdateSerializer, TitleReadSerializer,
-    ReviewSerializer, CommentSerializer
-)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, ReviewSerializer, SignupSerializer,
+                          TitleCreateUpdateSerializer, TitleReadSerializer,
+                          TokenSerializer, UserMeSerializer, UserSerializer)
 
 
 # Абстрактный базовый класс для опубликованных объектов
