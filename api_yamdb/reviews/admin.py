@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
-from .models import Category, Comment, Genre, Review, Title, TitleGenre, User
+from .models import Category, Comment, Genre, Review, Title, User
 
 
 # --- Resources для импорта/экспорта ---
@@ -105,15 +105,6 @@ class GenreAdmin(ImportExportModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 
-class TitleGenreInline(admin.TabularInline):
-    """Inline-форма для управления связями жанров с произведением."""
-    model = TitleGenre
-    extra = 1
-    autocomplete_fields = ['genre']
-    verbose_name = 'Жанр'
-    verbose_name_plural = 'Жанры'
-
-
 @admin.register(Title)
 class TitleAdmin(ImportExportModelAdmin):
     resource_class = TitleResource
@@ -121,7 +112,7 @@ class TitleAdmin(ImportExportModelAdmin):
     list_filter = ('year', 'category')
     search_fields = ('name', 'description')
     raw_id_fields = ('category',)
-    inlines = [TitleGenreInline]
+    filter_horizontal = ('genre',)
 
 
 @admin.register(Review)
