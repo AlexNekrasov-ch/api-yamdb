@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.utils.translation import gettext_lazy as _
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
@@ -67,16 +66,16 @@ class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'),
+        ('Personal info',
          {'fields': ('first_name', 'last_name', 'email', 'bio')}
          ),
-        (_('Permissions'), {
+        ('Permissions', {
             'fields': (
                 'role', 'is_active', 'is_staff',
                 'is_superuser', 'groups', 'user_permissions'
             ),
         }),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     add_fieldsets = (
