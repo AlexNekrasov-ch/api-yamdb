@@ -41,9 +41,9 @@ class SlugBasedViewSet(mixins.CreateModelMixin,
     использующих slug для идентификации.
     Поддерживает только GET (список), POST и DELETE.
     """
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
-    filter_backends = [filters.SearchFilter]
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
     def get_queryset(self):
@@ -133,7 +133,7 @@ def token(request):
 
 class UserViewSet(viewsets.ModelViewSet):
     """ViewSet для управления пользователями (только для admin)."""
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
@@ -189,15 +189,15 @@ class TitleViewSet(viewsets.ModelViewSet):
     """
     ViewSet для произведений (полный CRUD)
     """
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
-    permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (
         DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
-    ]
+    )
     filterset_class = TitleFilter
-    search_fields = ['name']
-    ordering_fields = ['name', 'year', 'rating']
-    ordering = ['-year']
+    search_fields = ('name',)
+    ordering_fields = ('name', 'year', 'rating')
+    ordering = ('-year',)
 
     def get_queryset(self):
         """
@@ -228,8 +228,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     """ViewSet для отзывов (вложенный в titles)"""
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdmin]
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = (IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
@@ -259,8 +259,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для комментариев (вложенный в reviews)"""
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdmin]
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = (IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
         review_id = self.kwargs.get('review_id')
