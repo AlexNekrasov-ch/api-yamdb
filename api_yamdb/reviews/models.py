@@ -4,6 +4,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
+
+from .constants import (
+    MAX_LEN_ROLE_NAME, MAX_LEN_NAME, MIN_TITLE_YEAR,
+    MAX_LEN_SLUG, MIN_SCORE, MAX_SCORE
+)
+
 
 class User(AbstractUser):
     """Кастомная модель пользователя с ролью и биографией."""
@@ -17,7 +24,7 @@ class User(AbstractUser):
     ]
 
     username = models.CharField(
-        max_length=150,
+        max_length=MAX_LEN_USERNAME,
         unique=True,
         validators=[UnicodeUsernameValidator()],
         error_messages={
@@ -25,7 +32,7 @@ class User(AbstractUser):
         },
     )
     email = models.EmailField(
-        max_length=254,
+        max_length=MAX_LEN_EMAIL,
         unique=True,
         verbose_name='Email',
     )
@@ -34,7 +41,7 @@ class User(AbstractUser):
         verbose_name='Биография',
     )
     role = models.CharField(
-        max_length=20,
+        max_length=MAX_LEN_ROLE_NAME,
         choices=ROLE_CHOICES,
         default=USER,
         verbose_name='Роль',
@@ -63,12 +70,12 @@ class User(AbstractUser):
 class Category(models.Model):
     """Категории произведений (Фильмы, Книги, Музыка)"""
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_LEN_NAME,
         unique=True,
         verbose_name='Название категории'
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=MAX_LEN_SLUG,
         unique=True,
         verbose_name='Слаг категории'
     )
@@ -85,12 +92,12 @@ class Category(models.Model):
 class Genre(models.Model):
     """Жанры произведений (Сказка, Рок, Артхаус)"""
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_LEN_NAME,
         unique=True,
         verbose_name='Название жанра'
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=MAX_LEN_SLUG,
         unique=True,
         verbose_name='Слаг жанра'
     )
@@ -107,14 +114,15 @@ class Genre(models.Model):
 class Title(models.Model):
     """Произведения, к которым пишут отзывы"""
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_LEN_NAME,
         verbose_name='Название произведения'
     )
     year = models.PositiveSmallIntegerField(
         validators=[
-            MinValueValidator(1), MaxValueValidator(timezone.now().year)
+            MinValueValidator(MIN_TITLE_YEAR),
+            MaxValueValidator(timezone.now().year)
         ],
-        default=2024,
+        default=timezone.now().year,
         verbose_name='Год выпуска'
     )
     category = models.ForeignKey(
@@ -188,10 +196,14 @@ class Review(models.Model):
     score = models.PositiveSmallIntegerField(
         'Оценка',
         validators=[
-            MinValueValidator(1, message='Оценка не может быть меньше 1'),
-            MaxValueValidator(10, message='Оценка не может быть больше 10')
+            MinValueValidator(
+                MIN_SCORE, message=f'Оценка не может быть меньше {MIN_SCORE}'
+            ),
+            MaxValueValidator(
+                MAX_SCORE, message=f'Оценка не может быть больше {MAX_SCORE}'
+            )
         ],
-        help_text='Оцените произведение от 1 до 10'
+        help_text=f'Оцените произведение от {MIN_SCORE} до {MAX_SCORE}'
     )
     pub_date = models.DateTimeField(
         'Дата публикации',

@@ -1,6 +1,7 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
+from constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -17,16 +18,16 @@ class UsernameNotMeMixin:
 
 class SignupSerializer(UsernameNotMeMixin, serializers.Serializer):
     """Валидация данных при регистрации (email + username)."""
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=MAX_LEN_EMAIL)
     username = serializers.CharField(
-        max_length=150,
+        max_length=MAX_LEN_USERNAME,
         validators=[UnicodeUsernameValidator()],
     )
 
 
 class TokenSerializer(serializers.Serializer):
     """Валидация username и confirmation_code для получения JWT."""
-    username = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=MAX_LEN_USERNAME)
     confirmation_code = serializers.CharField()
 
 

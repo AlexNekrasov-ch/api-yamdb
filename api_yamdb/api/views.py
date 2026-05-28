@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
 from .filters import TitleFilter
 from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
 from .serializers import (CategorySerializer, CommentSerializer,
@@ -82,8 +83,12 @@ def signup(request):
             email=email,
         )
 
-    code = secrets.token_hex(16)
-    cache.set(f'confirmation_code_{username}', code, timeout=600)
+    code = secrets.token_hex(CONFIRMATION_TOKEN_BYTES)
+    cache.set(
+        f'confirmation_code_{username}',
+        code,
+        timeout=CONFIRMATION_CODE_TIMEOUT
+    )
 
     send_mail(
         'Код подтверждения',
