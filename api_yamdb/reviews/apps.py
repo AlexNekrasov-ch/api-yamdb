@@ -5,3 +5,4 @@ class ReviewsConfig(AppConfig):
     """Конфигурация приложения reviews."""
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'reviews'
+    verbose_name = 'Отзывы'
