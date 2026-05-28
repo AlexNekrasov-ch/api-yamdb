@@ -151,12 +151,16 @@ class ReviewSerializer(serializers.ModelSerializer):
         Проверка: пользователь может оставить только один отзыв на произведение
         """
         request = self.context.get('request')
-        if request and request.method == 'POST':
-            title_id = self.context['view'].kwargs.get('title_id')
-            if request.user.reviews.filter(title_id=title_id).exists():
-                raise serializers.ValidationError(
-                    'Вы уже оставили отзыв на это произведение'
-                )
+
+        # Если не POST — пропускаем проверку
+        if not request or request.method != 'POST':
+            return data
+
+        title_id = self.context['view'].kwargs.get('title_id')
+        if request.user.reviews.filter(title_id=title_id).exists():
+            raise serializers.ValidationError(
+                'Вы уже оставили отзыв на это произведение'
+            )
         return data
 
 
