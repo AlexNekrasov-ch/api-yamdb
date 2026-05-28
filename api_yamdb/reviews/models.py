@@ -117,7 +117,7 @@ class Title(models.Model):
         max_length=MAX_LEN_NAME,
         verbose_name='Название произведения'
     )
-    year = models.PositiveSmallIntegerField(
+    year = models.SmallIntegerField(
         validators=[
             MinValueValidator(MIN_TITLE_YEAR),
             MaxValueValidator(timezone.now().year)
