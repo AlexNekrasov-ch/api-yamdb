@@ -38,14 +38,6 @@ class SlugBasedViewSet(mixins.CreateModelMixin,
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
-    def get_queryset(self):
-        """Может быть переопределено в дочерних классах"""
-        return super().get_queryset()
-
-    def get_serializer_class(self):
-        """Может быть переопределено в дочерних классах"""
-        return super().get_serializer_class()
-
 
 @api_view(['POST'])
 def signup(request):
