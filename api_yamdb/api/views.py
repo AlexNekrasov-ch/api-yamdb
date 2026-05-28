@@ -11,17 +11,15 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
 from .filters import TitleFilter
-from .permissions import (
-    IsAdmin, IsAuthenticatedAdminOrReadOnly,
-    SafeOrAuthenticatedAuthorOrModeratorOrAdmin
-)
+from .permissions import (IsAdmin, IsAuthenticatedAdminOrReadOnly,
+                          SafeOrAuthenticatedAuthorOrModeratorOrAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, SignupSerializer,
                           TitleCreateUpdateSerializer, TitleReadSerializer,
                           TokenSerializer, UserMeSerializer, UserSerializer)
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
 
 
 # Абстрактный базовый класс для категорий и жанров

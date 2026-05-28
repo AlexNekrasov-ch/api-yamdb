@@ -2,7 +2,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.utils import timezone
 from rest_framework import serializers
 
-from constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
+from ..constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 

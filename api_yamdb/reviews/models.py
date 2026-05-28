@@ -4,12 +4,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
-
-from .constants import (
-    MAX_LEN_ROLE_NAME, MAX_LEN_NAME, MIN_TITLE_YEAR,
-    MAX_LEN_SLUG, MIN_SCORE, MAX_SCORE
-)
+from ..constants import MAX_LEN_EMAIL, MAX_LEN_USERNAME
+from .constants import (MAX_LEN_NAME, MAX_LEN_ROLE_NAME, MAX_LEN_SLUG,
+                        MAX_SCORE, MIN_SCORE, MIN_TITLE_YEAR)
 
 
 class User(AbstractUser):
