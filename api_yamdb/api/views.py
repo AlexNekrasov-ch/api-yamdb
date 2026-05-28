@@ -97,13 +97,7 @@ def token(request):
     username = serializer.validated_data['username']
     confirmation_code = serializer.validated_data['confirmation_code']
 
-    try:
-        user = User.objects.get(username=username)
-    except User.DoesNotExist:
-        return Response(
-            {'username': ['Пользователь не найден.']},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+    user = get_object_or_404(User, username=username)
 
     cached_code = cache.get(f'confirmation_code_{username}')
     if cached_code != confirmation_code:
