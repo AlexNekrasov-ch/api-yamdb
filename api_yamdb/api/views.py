@@ -240,11 +240,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         review_id = self.kwargs.get('review_id')
-        return (
-            Comment.objects
-            .filter(review_id=review_id)
-            .select_related('author')
-        )
+        review = get_object_or_404(Review, id=review_id)
+        return review.comments.select_related('author')
 
     def get_review(self):
         title_id = self.kwargs.get('title_id')
