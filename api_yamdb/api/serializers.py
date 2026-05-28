@@ -121,12 +121,12 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Обновление произведения с жанрами"""
         genre_data = validated_data.pop('genre', None)
+        # Обновляем стандартные поля через родительский метод
+        instance = super().update(instance, validated_data)
+        # ManyToMany поле обновляем отдельно
         if genre_data is not None:
             instance.genre.set(genre_data)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
         return instance
 
     def to_representation(self, instance):
