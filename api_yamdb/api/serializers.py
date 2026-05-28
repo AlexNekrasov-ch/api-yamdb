@@ -1,4 +1,5 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.utils import timezone
 from rest_framework import serializers
 
 from constants import MAX_LEN_USERNAME, MAX_LEN_EMAIL
@@ -103,7 +104,6 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate_year(self, value):
         """Проверка, что год не из будущего"""
-        from django.utils import timezone
         current_year = timezone.now().year
         if value > current_year:
             raise serializers.ValidationError(
