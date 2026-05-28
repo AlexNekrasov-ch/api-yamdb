@@ -64,20 +64,17 @@ def signup(request):
     username = serializer.validated_data['username']
 
     if not User.objects.filter(username=username, email=email).exists():
+        errors = {}
         if User.objects.filter(username=username).exists():
-            return Response(
-                {'username': [
-                    'Пользователь с таким username уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors['username'] = [
+                'Пользователь с таким username уже существует.',
+            ]
         if User.objects.filter(email=email).exists():
-            return Response(
-                {'email': [
-                    'Пользователь с таким email уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors['email'] = [
+                'Пользователь с таким email уже существует.',
+            ]
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         User.objects.create_user(
             username=username,
             email=email,
