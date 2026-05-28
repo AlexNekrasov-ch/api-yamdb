@@ -21,6 +21,7 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, SignupSerializer,
                           TitleCreateUpdateSerializer, TitleReadSerializer,
                           TokenSerializer, UserMeSerializer, UserSerializer)
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
 
 
 # Абстрактный базовый класс для категорий и жанров
@@ -77,7 +78,7 @@ def signup(request):
     send_mail(
         'Код подтверждения',
         f'Ваш код подтверждения: {code}',
-        None,
+        DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=False,
     )
