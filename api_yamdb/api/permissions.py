@@ -10,7 +10,7 @@ class IsAdmin(permissions.BasePermission):
                 and request.user.is_admin)
 
 
-class IsAdminOrReadOnly(permissions.BasePermission):
+class IsAuthenticatedAdminOrReadOnly(permissions.BasePermission):
     """
     Разрешение на уровне запроса:
     - GET, HEAD, OPTIONS запросы доступны всем (включая анонимов)
@@ -30,7 +30,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
                 )
 
 
-class IsAuthorOrModeratorOrAdmin(permissions.BasePermission):
+class SafeOrAuthenticatedAuthorOrModeratorOrAdmin(permissions.BasePermission):
     """Разрешение: автор, модератор, админ могут изменять/удалять"""
     def has_permission(self, request, view):
         # Для создания (POST) нужна аутентификация

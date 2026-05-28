@@ -13,7 +13,10 @@ from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
 from .filters import TitleFilter
-from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+from .permissions import (
+    IsAdmin, IsAuthenticatedAdminOrReadOnly,
+    SafeOrAuthenticatedAuthorOrModeratorOrAdmin
+)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, SignupSerializer,
                           TitleCreateUpdateSerializer, TitleReadSerializer,
@@ -41,7 +44,7 @@ class SlugBasedViewSet(mixins.CreateModelMixin,
     использующих slug для идентификации.
     Поддерживает только GET (список), POST и DELETE.
     """
-    permission_classes = (IsAdminOrReadOnly,)
+    permission_classes = (IsAuthenticatedAdminOrReadOnly,)
     lookup_field = 'slug'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
@@ -190,7 +193,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     ViewSet для произведений (полный CRUD)
     """
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
-    permission_classes = (IsAdminOrReadOnly,)
+    permission_classes = (IsAuthenticatedAdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
     )
@@ -228,7 +231,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     """ViewSet для отзывов (вложенный в titles)"""
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthorOrModeratorOrAdmin,)
+    permission_classes = (SafeOrAuthenticatedAuthorOrModeratorOrAdmin,)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
@@ -259,7 +262,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для комментариев (вложенный в reviews)"""
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthorOrModeratorOrAdmin,)
+    permission_classes = (SafeOrAuthenticatedAuthorOrModeratorOrAdmin,)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
