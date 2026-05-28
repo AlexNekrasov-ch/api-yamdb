@@ -123,7 +123,8 @@ class Title(models.Model):
             MaxValueValidator(timezone.now().year)
         ],
         default=timezone.now().year,
-        verbose_name='Год выпуска'
+        verbose_name='Год выпуска',
+        db_index=True
     )
     category = models.ForeignKey(
         Category,
