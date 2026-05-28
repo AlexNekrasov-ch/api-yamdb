@@ -23,17 +23,6 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           TokenSerializer, UserMeSerializer, UserSerializer)
 
 
-# Абстрактный базовый класс для опубликованных объектов
-class PublishedAtModel(models.Model):
-    pub_date = models.DateTimeField(
-        'Дата и время создания',
-        auto_now_add=True
-    )
-
-    class Meta:
-        abstract = True
-
-
 # Абстрактный базовый класс для категорий и жанров
 class SlugBasedViewSet(mixins.CreateModelMixin,
                        mixins.DestroyModelMixin,
