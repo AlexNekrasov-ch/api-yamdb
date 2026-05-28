@@ -1,10 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.utils.translation import gettext_lazy as _
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
-from .models import Category, Comment, Genre, Review, Title, TitleGenre, User
+from .models import Category, Comment, Genre, Review, Title, User
 
 
 # --- Resources для импорта/экспорта ---
@@ -67,16 +66,16 @@ class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'),
+        ('Personal info',
          {'fields': ('first_name', 'last_name', 'email', 'bio')}
          ),
-        (_('Permissions'), {
+        ('Permissions', {
             'fields': (
                 'role', 'is_active', 'is_staff',
                 'is_superuser', 'groups', 'user_permissions'
             ),
         }),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     add_fieldsets = (
@@ -106,15 +105,6 @@ class GenreAdmin(ImportExportModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 
-class TitleGenreInline(admin.TabularInline):
-    """Inline-форма для управления связями жанров с произведением."""
-    model = TitleGenre
-    extra = 1
-    autocomplete_fields = ['genre']
-    verbose_name = 'Жанр'
-    verbose_name_plural = 'Жанры'
-
-
 @admin.register(Title)
 class TitleAdmin(ImportExportModelAdmin):
     resource_class = TitleResource
@@ -122,7 +112,7 @@ class TitleAdmin(ImportExportModelAdmin):
     list_filter = ('year', 'category')
     search_fields = ('name', 'description')
     raw_id_fields = ('category',)
-    inlines = [TitleGenreInline]
+    filter_horizontal = ('genre',)
 
 
 @admin.register(Review)

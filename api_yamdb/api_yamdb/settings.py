@@ -118,3 +118,7 @@ REST_FRAMEWORK = {
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
+
+DEFAULT_FROM_EMAIL = 'noreply@yamdb.com'
+MAX_LEN_USERNAME = 150
+MAX_LEN_EMAIL = 254

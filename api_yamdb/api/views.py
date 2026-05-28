@@ -11,23 +11,15 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
+from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
 from .filters import TitleFilter
-from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin
+from .permissions import (IsAdmin, IsAuthenticatedAdminOrReadOnly,
+                          SafeOrAuthenticatedAuthorOrModeratorOrAdmin)
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, SignupSerializer,
                           TitleCreateUpdateSerializer, TitleReadSerializer,
                           TokenSerializer, UserMeSerializer, UserSerializer)
-
-
-# Абстрактный базовый класс для опубликованных объектов
-class PublishedAtModel(models.Model):
-    pub_date = models.DateTimeField(
-        'Дата и время создания',
-        auto_now_add=True
-    )
-
-    class Meta:
-        abstract = True
 
 
 # Абстрактный базовый класс для категорий и жанров
@@ -40,18 +32,10 @@ class SlugBasedViewSet(mixins.CreateModelMixin,
     использующих slug для идентификации.
     Поддерживает только GET (список), POST и DELETE.
     """
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAuthenticatedAdminOrReadOnly,)
     lookup_field = 'slug'
-    filter_backends = [filters.SearchFilter]
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_queryset(self):
-        """Может быть переопределено в дочерних классах"""
-        return super().get_queryset()
-
-    def get_serializer_class(self):
-        """Может быть переопределено в дочерних классах"""
-        return super().get_serializer_class()
 
 
 @api_view(['POST'])
@@ -82,13 +66,17 @@ def signup(request):
             email=email,
         )
 
-    code = secrets.token_hex(16)
-    cache.set(f'confirmation_code_{username}', code, timeout=600)
+    code = secrets.token_hex(CONFIRMATION_TOKEN_BYTES)
+    cache.set(
+        f'confirmation_code_{username}',
+        code,
+        timeout=CONFIRMATION_CODE_TIMEOUT
+    )
 
     send_mail(
         'Код подтверждения',
         f'Ваш код подтверждения: {code}',
-        None,
+        DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=False,
     )
@@ -107,13 +95,7 @@ def token(request):
     username = serializer.validated_data['username']
     confirmation_code = serializer.validated_data['confirmation_code']
 
-    try:
-        user = User.objects.get(username=username)
-    except User.DoesNotExist:
-        return Response(
-            {'username': ['Пользователь не найден.']},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+    user = get_object_or_404(User, username=username)
 
     cached_code = cache.get(f'confirmation_code_{username}')
     if cached_code != confirmation_code:
@@ -128,7 +110,7 @@ def token(request):
 
 class UserViewSet(viewsets.ModelViewSet):
     """ViewSet для управления пользователями (только для admin)."""
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
@@ -184,15 +166,15 @@ class TitleViewSet(viewsets.ModelViewSet):
     """
     ViewSet для произведений (полный CRUD)
     """
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
-    permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+    permission_classes = (IsAuthenticatedAdminOrReadOnly,)
+    filter_backends = (
         DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
-    ]
+    )
     filterset_class = TitleFilter
-    search_fields = ['name']
-    ordering_fields = ['name', 'year', 'rating']
-    ordering = ['-year']
+    search_fields = ('name',)
+    ordering_fields = ('name', 'year', 'rating')
+    ordering = ('-year',)
 
     def get_queryset(self):
         """
@@ -223,16 +205,13 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     """ViewSet для отзывов (вложенный в titles)"""
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdmin]
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = (SafeOrAuthenticatedAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
-        return (
-            Review.objects
-            .filter(title_id=title_id)
-            .select_related('author')
-        )
+        title = get_object_or_404(Title, id=title_id)
+        return title.reviews.select_related('author')
 
     def get_title(self):
         title_id = self.kwargs.get('title_id')
@@ -254,16 +233,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для комментариев (вложенный в reviews)"""
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdmin]
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    permission_classes = (SafeOrAuthenticatedAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
         review_id = self.kwargs.get('review_id')
-        return (
-            Comment.objects
-            .filter(review_id=review_id)
-            .select_related('author')
-        )
+        review = get_object_or_404(Review, id=review_id)
+        return review.comments.select_related('author')
 
     def get_review(self):
         title_id = self.kwargs.get('title_id')

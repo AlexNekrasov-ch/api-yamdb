@@ -1,6 +1,8 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.utils import timezone
 from rest_framework import serializers
 
+from api_yamdb.settings import MAX_LEN_EMAIL, MAX_LEN_USERNAME
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -17,16 +19,16 @@ class UsernameNotMeMixin:
 
 class SignupSerializer(UsernameNotMeMixin, serializers.Serializer):
     """Валидация данных при регистрации (email + username)."""
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=MAX_LEN_EMAIL)
     username = serializers.CharField(
-        max_length=150,
+        max_length=MAX_LEN_USERNAME,
         validators=[UnicodeUsernameValidator()],
     )
 
 
 class TokenSerializer(serializers.Serializer):
     """Валидация username и confirmation_code для получения JWT."""
-    username = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=MAX_LEN_USERNAME)
     confirmation_code = serializers.CharField()
 
 
@@ -102,7 +104,6 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate_year(self, value):
         """Проверка, что год не из будущего"""
-        from django.utils import timezone
         current_year = timezone.now().year
         if value > current_year:
             raise serializers.ValidationError(
@@ -120,12 +121,12 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Обновление произведения с жанрами"""
         genre_data = validated_data.pop('genre', None)
+        # Обновляем стандартные поля через родительский метод
+        instance = super().update(instance, validated_data)
+        # ManyToMany поле обновляем отдельно
         if genre_data is not None:
             instance.genre.set(genre_data)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
         return instance
 
     def to_representation(self, instance):
@@ -150,12 +151,16 @@ class ReviewSerializer(serializers.ModelSerializer):
         Проверка: пользователь может оставить только один отзыв на произведение
         """
         request = self.context.get('request')
-        if request and request.method == 'POST':
-            title_id = self.context['view'].kwargs.get('title_id')
-            if request.user.reviews.filter(title_id=title_id).exists():
-                raise serializers.ValidationError(
-                    'Вы уже оставили отзыв на это произведение'
-                )
+
+        # Если не POST — пропускаем проверку
+        if not request or request.method != 'POST':
+            return data
+
+        title_id = self.context['view'].kwargs.get('title_id')
+        if request.user.reviews.filter(title_id=title_id).exists():
+            raise serializers.ValidationError(
+                'Вы уже оставили отзыв на это произведение'
+            )
         return data
 
 

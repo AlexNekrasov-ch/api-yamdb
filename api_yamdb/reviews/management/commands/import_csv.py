@@ -144,12 +144,8 @@ class Command(BaseCommand):
                 try:
                     title = Title.objects.get(id=row['title_id'])
                     genre = Genre.objects.get(id=row['genre_id'])
-                    _, created = TitleGenre.objects.get_or_create(
-                        title=title,
-                        genre=genre
-                    )
-                    if created:
-                        count += 1
+                    title.genre.add(genre)
+                    count += 1
                 except Title.DoesNotExist:
                     self.stdout.write(
                         f'    ⚠️ Произведение id={row["title_id"]} не найдено'

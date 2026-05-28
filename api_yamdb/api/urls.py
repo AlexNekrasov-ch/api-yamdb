@@ -5,6 +5,8 @@ from . import views
 from .views import (CategoryViewSet, CommentViewSet, GenreViewSet,
                     ReviewViewSet, TitleViewSet, UserViewSet)
 
+API_VERSION = 'v1'
+
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='users')
 router.register(r'categories', CategoryViewSet, basename='category')
@@ -22,7 +24,7 @@ router.register(
 )
 
 urlpatterns = [
-    path('auth/signup/', views.signup, name='signup'),
-    path('auth/token/', views.token, name='token'),
-    path('', include(router.urls))
+    path(f'{API_VERSION}/auth/signup/', views.signup, name='signup'),
+    path(f'{API_VERSION}/auth/token/', views.token, name='token'),
+    path(f'{API_VERSION}/', include(router.urls))
 ]
