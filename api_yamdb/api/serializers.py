@@ -6,6 +6,14 @@ from api_yamdb.settings import MAX_LEN_EMAIL, MAX_LEN_USERNAME
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
+# Базовый класс
+class SlugBasedSerializer(serializers.ModelSerializer):
+    """Базовый сериализатор для моделей с полями name и slug."""
+
+    class Meta:
+        fields = ('name', 'slug')
+
+
 class UsernameNotMeMixin:
     """Запрещает использование 'me' в качестве username."""
 
@@ -48,20 +56,18 @@ class UserMeSerializer(UserSerializer):
         read_only_fields = ('role',)
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(SlugBasedSerializer):
     """Сериализатор для категорий"""
 
-    class Meta:
+    class Meta(SlugBasedSerializer.Meta):
         model = Category
-        fields = ('name', 'slug')
 
 
-class GenreSerializer(serializers.ModelSerializer):
+class GenreSerializer(SlugBasedSerializer):
     """Сериализатор для жанров"""
 
-    class Meta:
+    class Meta(SlugBasedSerializer.Meta):
         model = Genre
-        fields = ('name', 'slug')
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
