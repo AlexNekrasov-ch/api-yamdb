@@ -1,0 +1,1 @@
+MAX_LEN_ROLE_NAME = 20
