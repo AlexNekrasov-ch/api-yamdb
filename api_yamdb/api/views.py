@@ -1,5 +1,4 @@
-import secrets
-
+from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import models
@@ -12,7 +11,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Genre, Review, Title, User
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
-from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
+from .constants import CONFIRMATION_CODE_TIMEOUT
 from .filters import TitleFilter
 from .permissions import (IsAdmin, IsAuthenticatedAdminOrReadOnly,
                           SafeOrAuthenticatedAuthorOrModeratorOrAdmin)
@@ -46,7 +45,10 @@ def signup(request):
     email = serializer.validated_data['email']
     username = serializer.validated_data['username']
 
-    if not User.objects.filter(username=username, email=email).exists():
+    # Проверяем, существует ли пользователь с такими данными
+    user = User.objects.filter(username=username, email=email).first()
+
+    if not user:
         if User.objects.filter(username=username).exists():
             return Response(
                 {'username': [
@@ -61,12 +63,12 @@ def signup(request):
                 ]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        User.objects.create_user(
+        user = User.objects.create_user(
             username=username,
             email=email,
         )
 
-    code = secrets.token_hex(CONFIRMATION_TOKEN_BYTES)
+    code = default_token_generator.make_token(user)
     cache.set(
         f'confirmation_code_{username}',
         code,
@@ -97,8 +99,8 @@ def token(request):
 
     user = get_object_or_404(User, username=username)
 
-    cached_code = cache.get(f'confirmation_code_{username}')
-    if cached_code != confirmation_code:
+    # Проверка токена через Django
+    if not default_token_generator.check_token(user, confirmation_code):
         return Response(
             {'confirmation_code': ['Неверный код подтверждения.']},
             status=status.HTTP_400_BAD_REQUEST,
