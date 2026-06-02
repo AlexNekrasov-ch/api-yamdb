@@ -7,9 +7,11 @@ from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class Command(BaseCommand):
+    """Импорт данных из CSV-файлов в базу данных."""
     help = 'Импорт данных из CSV-файлов в базу данных'
 
     def handle(self, *args, **options):
+        """Запускает последовательный импорт всех CSV-файлов."""
         base_path = 'static/data/'
 
         # Порядок импорта важен из-за внешних ключей
