@@ -22,7 +22,6 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           TokenSerializer, UserMeSerializer, UserSerializer)
 
 
-# Абстрактный базовый класс для категорий и жанров
 class SlugBasedViewSet(mixins.CreateModelMixin,
                        mixins.DestroyModelMixin,
                        mixins.ListModelMixin,
@@ -47,20 +46,17 @@ def signup(request):
     username = serializer.validated_data['username']
 
     if not User.objects.filter(username=username, email=email).exists():
+        errors = {}
         if User.objects.filter(username=username).exists():
-            return Response(
-                {'username': [
-                    'Пользователь с таким username уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors['username'] = [
+                'Пользователь с таким username уже существует.',
+            ]
         if User.objects.filter(email=email).exists():
-            return Response(
-                {'email': [
-                    'Пользователь с таким email уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors['email'] = [
+                'Пользователь с таким email уже существует.',
+            ]
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         User.objects.create_user(
             username=username,
             email=email,
@@ -209,18 +205,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
+        """Возвращает отзывы для текущего произведения."""
         title = self.get_title()
         return title.reviews.select_related('author')
 
     def get_title(self):
+        """Возвращает произведение по title_id."""
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, id=title_id)
 
     def perform_create(self, serializer):
+        """Создаёт отзыв с автором и привязкой к произведению."""
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
 
     def update(self, request, *args, **kwargs):
+        """Запрещает PUT, разрешает PATCH."""
         if request.method == 'PUT':
             return Response(
                 {'detail': 'Method PUT not allowed.'},
@@ -236,19 +236,23 @@ class CommentViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
+        """Возвращает комментарии для текущего отзыва."""
         review = self.get_review()
         return review.comments.select_related('author')
 
     def get_review(self):
+        """Возвращает отзыв по title_id и review_id."""
         title_id = self.kwargs.get('title_id')
         review_id = self.kwargs.get('review_id')
         return get_object_or_404(Review, id=review_id, title_id=title_id)
 
     def perform_create(self, serializer):
+        """Создаёт комментарий с автором и привязкой к отзыву."""
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
 
     def update(self, request, *args, **kwargs):
+        """Запрещает PUT, разрешает PATCH."""
         if request.method == 'PUT':
             return Response(
                 {'detail': 'Method PUT not allowed.'},
