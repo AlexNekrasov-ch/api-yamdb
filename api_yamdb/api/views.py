@@ -81,6 +81,7 @@ def signup(request):
         [email],
         fail_silently=False,
     )
+    print(f'\nКод подтверждения для {username}: {code}\n')
 
     return Response(
         {'email': email, 'username': username},
