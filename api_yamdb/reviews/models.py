@@ -29,6 +29,7 @@ class Category(models.Model):
         ordering = ('name',)
 
     def __str__(self):
+        """Возвращает название категории."""
         return self.name
 
 
@@ -51,6 +52,7 @@ class Genre(models.Model):
         ordering = ('name',)
 
     def __str__(self):
+        """Возвращает название жанра."""
         return self.name
 
 
@@ -85,7 +87,7 @@ class Title(models.Model):
     description = models.TextField(
         verbose_name='Описание',
         blank=True,
-        null=True
+        default=''
     )
 
     class Meta:
@@ -94,6 +96,7 @@ class Title(models.Model):
         ordering = ('-year', 'name')
 
     def __str__(self):
+        """Возвращает название произведения."""
         return self.name
 
 
@@ -147,6 +150,7 @@ class Review(models.Model):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление отзыва."""
         return f'Отзыв от {self.author.username} на {self.title.name}'
 
 
@@ -181,6 +185,7 @@ class Comment(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
+        """Возвращает строковое представление комментария."""
         return (
             f'Комментарий от {self.author.username} '
             f'к отзыву {self.review.id}'

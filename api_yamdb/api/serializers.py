@@ -19,6 +19,7 @@ class UsernameNotMeMixin:
     """Запрещает использование 'me' в качестве username."""
 
     def validate_username(self, value):
+        """Запрещает username 'me'."""
         if value == 'me':
             raise serializers.ValidationError(
                 'Имя пользователя "me" запрещено.'
@@ -63,6 +64,12 @@ class CategorySerializer(SlugBasedSerializer):
     class Meta(SlugBasedSerializer.Meta):
         model = Category
 
+    def to_representation(self, instance):
+        """Возвращает пустой объект при None."""
+        if instance is None:
+            return {'name': '', 'slug': ''}
+        return super().to_representation(instance)
+
 
 class GenreSerializer(SlugBasedSerializer):
     """Сериализатор для жанров"""
@@ -102,8 +109,10 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
-        many=True
+        many=True,
+        allow_empty=False,
     )
+    year = serializers.IntegerField(required=True)
 
     class Meta:
         model = Title
