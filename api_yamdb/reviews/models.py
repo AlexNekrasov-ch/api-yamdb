@@ -100,22 +100,38 @@ class Title(models.Model):
         return self.name
 
 
-class Review(models.Model):
+class BaseCommentReview(models.Model):
+    """Абстрактная модель для отзывов и комментариев"""
+    text = models.TextField(verbose_name='Текст')
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='%(class)ss',
+        verbose_name='Автор'
+    )
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('-pub_date',)
+
+    def __str__(self):
+        return f'{self.__class__.__name__} от {self.author.username}'
+
+
+class Review(BaseCommentReview):
     """Отзывы на произведения с оценкой"""
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='Произведение'
-    )
-    text = models.TextField(
-        verbose_name='Текст отзыва'
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='reviews',
-        verbose_name='Автор отзыва'
     )
     score = models.PositiveSmallIntegerField(
         'Оценка',
@@ -129,18 +145,10 @@ class Review(models.Model):
         ],
         help_text=f'Оцените произведение от {MIN_SCORE} до {MAX_SCORE}'
     )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True,
-        null=True,
-        blank=True,
-        db_index=True
-    )
 
-    class Meta:
+    class Meta(BaseCommentReview.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        ordering = ('-pub_date',)
         # Ограничение: один пользователь - один отзыв на произведение
         constraints = [
             models.UniqueConstraint(
@@ -154,29 +162,13 @@ class Review(models.Model):
         return f'Отзыв от {self.author.username} на {self.title.name}'
 
 
-class Comment(models.Model):
+class Comment(BaseCommentReview):
     """Комментарии к отзывам"""
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Отзыв'
-    )
-    text = models.TextField(
-        verbose_name='Текст комментария'
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='comments',
-        verbose_name='Автор комментария'
-    )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True,
-        null=True,
-        blank=True,
-        db_index=True
     )
 
     class Meta:
