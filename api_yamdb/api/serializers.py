@@ -3,13 +3,23 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from api_yamdb.settings import MAX_LEN_EMAIL, MAX_LEN_USERNAME
-from reviews.models import Category, Comment, Genre, Review, Title, User
+from reviews.models import Category, Comment, Genre, Review, Title
+from users.models import User
+
+
+# Базовый класс
+class SlugBasedSerializer(serializers.ModelSerializer):
+    """Базовый сериализатор для моделей с полями name и slug."""
+
+    class Meta:
+        fields = ('name', 'slug')
 
 
 class UsernameNotMeMixin:
     """Запрещает использование 'me' в качестве username."""
 
     def validate_username(self, value):
+        """Запрещает username 'me'."""
         if value == 'me':
             raise serializers.ValidationError(
                 'Имя пользователя "me" запрещено.'
@@ -48,20 +58,24 @@ class UserMeSerializer(UserSerializer):
         read_only_fields = ('role',)
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(SlugBasedSerializer):
     """Сериализатор для категорий"""
 
-    class Meta:
+    class Meta(SlugBasedSerializer.Meta):
         model = Category
-        fields = ('name', 'slug')
+
+    def to_representation(self, instance):
+        """Возвращает пустой объект при None."""
+        if instance is None:
+            return {'name': '', 'slug': ''}
+        return super().to_representation(instance)
 
 
-class GenreSerializer(serializers.ModelSerializer):
+class GenreSerializer(SlugBasedSerializer):
     """Сериализатор для жанров"""
 
-    class Meta:
+    class Meta(SlugBasedSerializer.Meta):
         model = Genre
-        fields = ('name', 'slug')
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
@@ -95,8 +109,10 @@ class TitleCreateUpdateSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
-        many=True
+        many=True,
+        allow_empty=False,
     )
+    year = serializers.IntegerField(required=True)
 
     class Meta:
         model = Title

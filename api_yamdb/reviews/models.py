@@ -4,63 +4,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api_yamdb.settings import MAX_LEN_EMAIL, MAX_LEN_USERNAME
-from .constants import (MAX_LEN_NAME, MAX_LEN_ROLE_NAME, MAX_LEN_SLUG,
+from .constants import (MAX_LEN_NAME, MAX_LEN_SLUG,
                         MAX_SCORE, MIN_SCORE, MIN_TITLE_YEAR)
-
-
-class User(AbstractUser):
-    """Кастомная модель пользователя с ролью и биографией."""
-    USER = 'user'
-    MODERATOR = 'moderator'
-    ADMIN = 'admin'
-    ROLE_CHOICES = [
-        (USER, 'Пользователь'),
-        (MODERATOR, 'Модератор'),
-        (ADMIN, 'Администратор'),
-    ]
-
-    username = models.CharField(
-        max_length=MAX_LEN_USERNAME,
-        unique=True,
-        validators=[UnicodeUsernameValidator()],
-        error_messages={
-            'unique': 'Пользователь с таким именем уже существует.',
-        },
-    )
-    email = models.EmailField(
-        max_length=MAX_LEN_EMAIL,
-        unique=True,
-        verbose_name='Email',
-    )
-    bio = models.TextField(
-        blank=True,
-        verbose_name='Биография',
-    )
-    role = models.CharField(
-        max_length=MAX_LEN_ROLE_NAME,
-        choices=ROLE_CHOICES,
-        default=USER,
-        verbose_name='Роль',
-    )
-
-    class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
-        ordering = ('username',)
-
-    def __str__(self):
-        return self.username
-
-    @property
-    def is_admin(self):
-        """Проверяет, является ли пользователь администратором."""
-        return self.role == self.ADMIN or self.is_superuser
-
-    @property
-    def is_moderator(self):
-        """Проверяет, является ли пользователь модератором."""
-        return self.role == self.MODERATOR
+from users.models import User
 
 
 # Основные модели проекта
@@ -83,6 +29,7 @@ class Category(models.Model):
         ordering = ('name',)
 
     def __str__(self):
+        """Возвращает название категории."""
         return self.name
 
 
@@ -105,6 +52,7 @@ class Genre(models.Model):
         ordering = ('name',)
 
     def __str__(self):
+        """Возвращает название жанра."""
         return self.name
 
 
@@ -139,7 +87,7 @@ class Title(models.Model):
     description = models.TextField(
         verbose_name='Описание',
         blank=True,
-        null=True
+        default=''
     )
 
     class Meta:
@@ -148,25 +96,42 @@ class Title(models.Model):
         ordering = ('-year', 'name')
 
     def __str__(self):
+        """Возвращает название произведения."""
         return self.name
 
 
-class Review(models.Model):
+class BaseCommentReview(models.Model):
+    """Абстрактная модель для отзывов и комментариев"""
+    text = models.TextField(verbose_name='Текст')
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='%(class)ss',
+        verbose_name='Автор'
+    )
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('-pub_date',)
+
+    def __str__(self):
+        return f'{self.__class__.__name__} от {self.author.username}'
+
+
+class Review(BaseCommentReview):
     """Отзывы на произведения с оценкой"""
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='Произведение'
-    )
-    text = models.TextField(
-        verbose_name='Текст отзыва'
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='reviews',
-        verbose_name='Автор отзыва'
     )
     score = models.PositiveSmallIntegerField(
         'Оценка',
@@ -180,18 +145,10 @@ class Review(models.Model):
         ],
         help_text=f'Оцените произведение от {MIN_SCORE} до {MAX_SCORE}'
     )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True,
-        null=True,
-        blank=True,
-        db_index=True
-    )
 
-    class Meta:
+    class Meta(BaseCommentReview.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        ordering = ('-pub_date',)
         # Ограничение: один пользователь - один отзыв на произведение
         constraints = [
             models.UniqueConstraint(
@@ -201,32 +158,17 @@ class Review(models.Model):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление отзыва."""
         return f'Отзыв от {self.author.username} на {self.title.name}'
 
 
-class Comment(models.Model):
+class Comment(BaseCommentReview):
     """Комментарии к отзывам"""
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Отзыв'
-    )
-    text = models.TextField(
-        verbose_name='Текст комментария'
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='comments',
-        verbose_name='Автор комментария'
-    )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True,
-        null=True,
-        blank=True,
-        db_index=True
     )
 
     class Meta:
@@ -235,6 +177,7 @@ class Comment(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
+        """Возвращает строковое представление комментария."""
         return (
             f'Комментарий от {self.author.username} '
             f'к отзыву {self.review.id}'

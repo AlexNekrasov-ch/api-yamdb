@@ -1,24 +1,12 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
-from .models import Category, Comment, Genre, Review, Title, User
-
-
-# --- Resources для импорта/экспорта ---
-class UserResource(resources.ModelResource):
-    class Meta:
-        model = User
-        fields = (
-            'id', 'username', 'email', 'role',
-            'bio', 'first_name', 'last_name'
-        )
-        import_id_fields = ('id',)
-        skip_unchanged = True
+from .models import Category, Comment, Genre, Review, Title
 
 
 class CategoryResource(resources.ModelResource):
+    """Resource для импорта/экспорта категорий."""
     class Meta:
         model = Category
         fields = ('id', 'name', 'slug')
@@ -26,6 +14,7 @@ class CategoryResource(resources.ModelResource):
 
 
 class GenreResource(resources.ModelResource):
+    """Resource для импорта/экспорта жанров."""
     class Meta:
         model = Genre
         fields = ('id', 'name', 'slug')
@@ -33,6 +22,7 @@ class GenreResource(resources.ModelResource):
 
 
 class TitleResource(resources.ModelResource):
+    """Resource для импорта/экспорта произведений."""
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'category', 'description')
@@ -40,6 +30,7 @@ class TitleResource(resources.ModelResource):
 
 
 class ReviewResource(resources.ModelResource):
+    """Resource для импорта/экспорта отзывов."""
     class Meta:
         model = Review
         fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
@@ -47,50 +38,16 @@ class ReviewResource(resources.ModelResource):
 
 
 class CommentResource(resources.ModelResource):
+    """Resource для импорта/экспорта комментариев."""
     class Meta:
         model = Comment
         fields = ('id', 'review', 'text', 'author', 'pub_date')
         import_id_fields = ('id',)
 
 
-# --- Админ-классы ---
-@admin.register(User)
-class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
-    resource_class = UserResource
-    list_display = (
-        'id', 'username', 'email', 'first_name',
-        'last_name', 'role', 'is_staff'
-    )
-    list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
-    search_fields = ('username', 'email', 'first_name', 'last_name')
-
-    fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info',
-         {'fields': ('first_name', 'last_name', 'email', 'bio')}
-         ),
-        ('Permissions', {
-            'fields': (
-                'role', 'is_active', 'is_staff',
-                'is_superuser', 'groups', 'user_permissions'
-            ),
-        }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-    )
-
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': (
-                'username', 'email', 'password1', 'password2',
-                'role', 'first_name', 'last_name', 'bio'
-            ),
-        }),
-    )
-
-
 @admin.register(Category)
 class CategoryAdmin(ImportExportModelAdmin):
+    """Админ-панель для управления категориями."""
     resource_class = CategoryResource
     list_display = ('id', 'name', 'slug')
     search_fields = ('name', 'slug')
@@ -99,6 +56,7 @@ class CategoryAdmin(ImportExportModelAdmin):
 
 @admin.register(Genre)
 class GenreAdmin(ImportExportModelAdmin):
+    """Админ-панель для управления жанрами."""
     resource_class = GenreResource
     list_display = ('id', 'name', 'slug')
     search_fields = ('name', 'slug')
@@ -107,6 +65,7 @@ class GenreAdmin(ImportExportModelAdmin):
 
 @admin.register(Title)
 class TitleAdmin(ImportExportModelAdmin):
+    """Админ-панель для управления произведениями."""
     resource_class = TitleResource
     list_display = ('id', 'name', 'year', 'category', 'description')
     list_filter = ('year', 'category')
@@ -117,6 +76,7 @@ class TitleAdmin(ImportExportModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(ImportExportModelAdmin):
+    """Админ-панель для управления отзывами."""
     resource_class = ReviewResource
     list_display = ('id', 'title', 'author', 'score', 'pub_date')
     list_filter = ('score', 'pub_date', 'title')
@@ -127,6 +87,7 @@ class ReviewAdmin(ImportExportModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(ImportExportModelAdmin):
+    """Админ-панель для управления комментариями."""
     resource_class = CommentResource
     list_display = ('id', 'review', 'author', 'pub_date')
     list_filter = ('pub_date', 'review__title')

@@ -1,5 +1,4 @@
-import secrets
-
+from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import models
@@ -10,9 +9,10 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import Category, Genre, Review, Title, User
+from reviews.models import Category, Genre, Review, Title
+from users.models import User
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
-from .constants import CONFIRMATION_CODE_TIMEOUT, CONFIRMATION_TOKEN_BYTES
+from .constants import CONFIRMATION_CODE_TIMEOUT
 from .filters import TitleFilter
 from .permissions import (IsAdmin, IsAuthenticatedAdminOrReadOnly,
                           SafeOrAuthenticatedAuthorOrModeratorOrAdmin)
@@ -46,27 +46,28 @@ def signup(request):
     email = serializer.validated_data['email']
     username = serializer.validated_data['username']
 
-    if not User.objects.filter(username=username, email=email).exists():
+    # Проверяем, существует ли пользователь с такими данными
+    user = User.objects.filter(username=username, email=email).first()
+
+    if not user:
+        errors = {}
         if User.objects.filter(username=username).exists():
-            return Response(
-                {'username': [
-                    'Пользователь с таким username уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors['username'] = [
+                'Пользователь с таким username уже существует.',
+            ]
         if User.objects.filter(email=email).exists():
-            return Response(
-                {'email': [
-                    'Пользователь с таким email уже существует.',
-                ]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        User.objects.create_user(
+            errors['email'] = [
+                'Пользователь с таким email уже существует.',
+            ]
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.create_user(
             username=username,
             email=email,
         )
 
-    code = secrets.token_hex(CONFIRMATION_TOKEN_BYTES)
+    code = default_token_generator.make_token(user)
     cache.set(
         f'confirmation_code_{username}',
         code,
@@ -80,6 +81,7 @@ def signup(request):
         [email],
         fail_silently=False,
     )
+    print(f'\nКод подтверждения для {username}: {code}\n')
 
     return Response(
         {'email': email, 'username': username},
@@ -97,8 +99,8 @@ def token(request):
 
     user = get_object_or_404(User, username=username)
 
-    cached_code = cache.get(f'confirmation_code_{username}')
-    if cached_code != confirmation_code:
+    # Проверка токена через Django
+    if not default_token_generator.check_token(user, confirmation_code):
         return Response(
             {'confirmation_code': ['Неверный код подтверждения.']},
             status=status.HTTP_400_BAD_REQUEST,
@@ -209,18 +211,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
+        """Возвращает отзывы для текущего произведения."""
         title = self.get_title()
         return title.reviews.select_related('author')
 
     def get_title(self):
+        """Возвращает произведение по title_id."""
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, id=title_id)
 
     def perform_create(self, serializer):
+        """Создаёт отзыв с автором и привязкой к произведению."""
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
 
     def update(self, request, *args, **kwargs):
+        """Запрещает PUT, разрешает PATCH."""
         if request.method == 'PUT':
             return Response(
                 {'detail': 'Method PUT not allowed.'},
@@ -236,19 +242,23 @@ class CommentViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
     def get_queryset(self):
+        """Возвращает комментарии для текущего отзыва."""
         review = self.get_review()
         return review.comments.select_related('author')
 
     def get_review(self):
+        """Возвращает отзыв по title_id и review_id."""
         title_id = self.kwargs.get('title_id')
         review_id = self.kwargs.get('review_id')
         return get_object_or_404(Review, id=review_id, title_id=title_id)
 
     def perform_create(self, serializer):
+        """Создаёт комментарий с автором и привязкой к отзыву."""
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
 
     def update(self, request, *args, **kwargs):
+        """Запрещает PUT, разрешает PATCH."""
         if request.method == 'PUT':
             return Response(
                 {'detail': 'Method PUT not allowed.'},
